@@ -28,7 +28,7 @@ public class BaseController {
         return parentAccountInstance.getMediaDataController();
     }
 
-    protected final ConnectionsManager getConnectionsManager() {
+    public final ConnectionsManager getConnectionsManager() {
         return parentAccountInstance.getConnectionsManager();
     }
 

@@ -95,6 +95,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout;
 
 import org.telegram.PhoneFormat.PhoneFormat;
+import org.telegram.export.ExportHelper;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildConfig;
@@ -930,6 +931,7 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
     private final static int text_underline = 56;
 
     private final static int search = 40;
+    private final static int export_chat=41;
 
     private final static int id_chat_compose_panel = 1000;
 
@@ -1632,6 +1634,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                         chatActivityEnterView.getEditField().setSelectionOverride(editTextStart, editTextEnd);
                         chatActivityEnterView.getEditField().makeSelectedRegular();
                     }
+                }else if(id== export_chat){
+                    ExportHelper.getCompleteChat(((int) dialog_id),context,getMessagesController());
+                    Toast.makeText(context,"Processing...", Toast.LENGTH_SHORT).show();
                 }
             }
         });
@@ -1852,6 +1857,9 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     headerItem.addSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString("DeleteAndExit", R.string.DeleteAndExit));
                 } else {
                     headerItem.addSubItem(delete_chat, R.drawable.msg_delete, LocaleController.getString("DeleteChatUser", R.string.DeleteChatUser));
+                    if(!(currentUser.self|| ChatObject.isMegagroup(currentChat))){
+                        headerItem.addSubItem(export_chat, 0, LocaleController.getString("ExportChatUser", R.string.ExportChatUser));
+                    }
                 }
             }
             if (currentUser != null && currentUser.self) {

@@ -1,12 +1,22 @@
 package org.telegram.export;
 
-class Database {
-    private static final Database ourInstance = new Database();
+import android.content.Context;
 
-    static Database getInstance() {
-        return ourInstance;
+import androidx.room.Room;
+import androidx.room.RoomDatabase;
+@androidx.room.Database(entities = Message.class,version = 2)
+public abstract class Database extends RoomDatabase {
+    private static Database database;
+
+    public static synchronized Database getDatabase(Context context) {
+        if(database==null)
+            database = Room.databaseBuilder(context.getApplicationContext() , Database.class , "Db.db")
+                    .allowMainThreadQueries()
+                    .fallbackToDestructiveMigration()
+                    .build();
+        return database;
     }
 
-    private Database() {
-    }
+    public abstract MessageDao getMessageDao();
+
 }
