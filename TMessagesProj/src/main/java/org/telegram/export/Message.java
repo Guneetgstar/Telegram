@@ -30,7 +30,7 @@ public class Message {
     public Message(){
 
     }
-    public Message(int id,int from_id,int to_id,long date,int reply_to_msg_id,String from_name,String to_name, String message,String action,String file){
+    public Message(int id,int from_id,int to_id,int reply_to_msg_id,long date,String from_name,String to_name, String message,String action,String file){
         this.date=date;
         this.from_id=from_id;
         this.msg_id=id;
