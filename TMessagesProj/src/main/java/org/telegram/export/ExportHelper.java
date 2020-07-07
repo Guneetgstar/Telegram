@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.Semaphore;
 
 import static org.telegram.export.Database.getDatabase;
@@ -33,7 +32,8 @@ public class ExportHelper {
         int pageSize = 50;
         getDatabase(context).getMessageDao()
                 .deleteAll();
-        getAppUserDir(context, ((long) userId)).delete();
+        getAppDir(context).delete();
+//        getAppUserDir(context, ((long) userId)).delete();
         getAppCacheDir(context).delete();
         new Thread(() -> {
             TLRPC.TL_messages_getHistory req = new TLRPC.TL_messages_getHistory();
@@ -60,14 +60,14 @@ public class ExportHelper {
                                 localFile = exportMessageMedia(message,context);
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
-                                getAppUserDir(context,message.dialog_id).delete();
+//                                getAppUserDir(context,message.dialog_id).delete();
                                 getAppCacheDir(context).delete();
                                 getDatabase(context).getMessageDao()
                                         .deleteAll();
                                 AndroidUtilities.runOnUIThread(()->Toast.makeText(context,e.getMessage(),Toast.LENGTH_SHORT).show());
                                 break;
                             }
-                            if (localFile == null && (message.message == null || message.message.isEmpty())) {//TODO
+                            if (localFile == null && (message.message == null || message.message.isEmpty())) {
                                 localFile = getAppFile(context, String.valueOf(message.id), "err");
                                 try (DataOutputStream outputStream = new DataOutputStream(new FileOutputStream(localFile))) {
                                     outputStream.writeUTF("Cant read media for msg id " + message.id + " media_type " + message.media.getClass().getName());
@@ -87,12 +87,12 @@ public class ExportHelper {
                                         message.to_id.user_id,
                                         message.reply_to_msg_id,
                                         message.date,
-                                        getUserName(res.users, message.from_id),
-                                        getUserName(res.users, message.to_id.user_id),
+                                        getUserName(res.users,message.from_id),
+                                        getUserName(res.users,message.to_id.user_id),
                                         message.message,
                                         actionName,
                                         filePath
-                                ));
+                                        ));
                     }
                 }
                 if (res.messages.size() == history.limit) {
@@ -150,12 +150,12 @@ public class ExportHelper {
         if (message.media.audio_unused != null) {
             MessageObject object = new MessageObject(UserConfig.selectedAccount, message, false);
             FileLoadOperation operation = new FileLoadOperation(object.getDocument(), object);
-            localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppUserDir(context, String.valueOf(message.dialog_id)), getAppTempDir(context));
+            localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppDir(context), getAppCacheDir(context));
         }
         if (message.media.video_unused != null) {
             MessageObject object = new MessageObject(UserConfig.selectedAccount, message, false);
             FileLoadOperation operation = new FileLoadOperation(object.getDocument(), object);
-            localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppUserDir(context, String.valueOf(message.dialog_id)), getAppTempDir(context));
+            localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppDir(context), getAppCacheDir(context));
         }
         if (message.media.photo != null) {
             TLRPC.PhotoSize size = null;
@@ -168,7 +168,7 @@ public class ExportHelper {
             ImageLocation location = ImageLocation.getForPhoto(size, message.media.photo);
             if (location != null) {
                 FileLoadOperation operation = new FileLoadOperation(location, new MessageObject(UserConfig.selectedAccount, message, false), null, location.getSize());
-                localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppUserDir(context, String.valueOf(message.dialog_id)), getAppTempDir(context));
+                localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppDir(context), getAppCacheDir(context));
             }
         }
         if (message.media.document != null) {
@@ -183,7 +183,7 @@ public class ExportHelper {
                 //Retain the name of the document and save the file
                 message.message += FileLoader.getDocumentFileName(message.media.document);
                 FileLoadOperation operation = new FileLoadOperation(message.media.document, new MessageObject(UserConfig.selectedAccount, message, false));
-                localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppUserDir(context, String.valueOf(message.dialog_id)), getAppTempDir(context));
+                localFile = new SynchronousFileLoader().syncDownloadFile(operation, getAppDir(context), getAppCacheDir(context));
             }
         }
         if (message.media instanceof TLRPC.TL_messageMediaContact) {
@@ -194,11 +194,11 @@ public class ExportHelper {
                 fileWriter.append(message.media.vcard);
             } catch (Exception e) {
                 e.printStackTrace();
-                getAppUserDir(context,message.dialog_id).delete();
+//                getAppUserDir(context,message.dialog_id).delete();
                 getAppCacheDir(context).delete();
                 getDatabase(context).getMessageDao()
                         .deleteAll();
-                AndroidUtilities.runOnUIThread(()->Toast.makeText(context,e.getMessage(),Toast.LENGTH_SHORT).show());
+                AndroidUtilities.runOnUIThread(()-> Toast.makeText(context,e.getMessage(),Toast.LENGTH_SHORT).show());
             }
         }
         if (message.media.geo != null) {
@@ -219,14 +219,14 @@ public class ExportHelper {
                 public void didFinishLoadingFile(FileLoadOperation operation, File finalFile) {
                     Log.i("File", "Loaded at " + finalFile.toString());
                     outputFile = finalFile;
-                    tempDir.delete();
+//                    tempDir.delete();
                     semaphore.release();
                 }
 
                 @Override
                 public void didFailedLoadingFile(FileLoadOperation operation, int state) {
                     Log.i("File", "Failed with state " + state);
-                    tempDir.delete();
+//                    tempDir.delete();
                     semaphore.release();
                 }
 
@@ -246,15 +246,6 @@ public class ExportHelper {
         return context.getFilesDir();
     }
 
-    public static File getAppUserDir(Context application, String user){
-        File userDir=new File(getAppDir(application),user);
-        userDir.mkdir();
-        return userDir;
-    }
-    public static File getAppUserDir(Context application, Long user){
-        return getAppUserDir(application, String.valueOf(user));
-    }
-
     public static File getAppDir(Context application) {
         String state = Environment.getExternalStorageState();
         File file;
@@ -267,16 +258,9 @@ public class ExportHelper {
         return file;
     }
 
-    public static File getAppCacheDir(Context application){
+    public static File getAppCacheDir(Context application) {
         File file = new File(getAppDir(application), "cache");
-//        file.deleteOnExit();
-        file.mkdirs();
-        return file;
-    }
-
-    public static File getAppTempDir(Context application) {
-        File file = new File(getAppCacheDir(application), UUID.randomUUID().toString());
-//        file.deleteOnExit();
+        file.deleteOnExit();
         file.mkdirs();
         return file;
     }
