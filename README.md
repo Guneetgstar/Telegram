@@ -1,5 +1,9 @@
 ## Telegram messenger for Android
 
+**Update**
+-You can export your chats with an added feature over the official [Telegram App for Android](https://play.google.com/store/apps/details?id=org.telegram.messenger). To use it just open the chat you want to export-> go to option menu-> Select export chat. All the messages will be saves in a {user_id}.json file and all the files with {msg_id}.*ext in "Telegram Exports" directory. Make sure the relevant permissions are granted before exporting.
+-Note: This is an experimental feature and only tested on user chats and may contain bugs. Please report them if you find any and I'll try to fix them.
+
 [Telegram](https://telegram.org) is a messaging app with a focus on speed and security. It’s superfast, simple and free.
 This repo contains the official source code for [Telegram App for Android](https://play.google.com/store/apps/details?id=org.telegram.messenger).
 
