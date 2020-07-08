@@ -2,11 +2,13 @@ package org.telegram.export;
 
 import android.content.Context;
 import android.os.Environment;
+import android.widget.Toast;
 
 import com.google.android.exoplayer2.util.Log;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLoadOperation;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
@@ -139,6 +141,7 @@ public class ExportHelper {
                     }catch (IOException e){
                         e.printStackTrace();
                     }
+                    AndroidUtilities.runOnUIThread(()->Toast.makeText(context,"Export complete!",Toast.LENGTH_SHORT).show());
                 }
             } else {
                 Log.e(ExportHelper.class.getName(), "response is null");
