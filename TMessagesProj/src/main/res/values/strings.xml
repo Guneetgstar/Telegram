@@ -168,6 +168,7 @@
     <string name="Unarchive">Unarchive</string>
     <string name="ArchivedChats">Archived Chats</string>
     <string name="DeleteChatUser">Delete chat</string>
+    <string name="ExportChatUser">Export chat</string>
     <string name="HiddenName">Deleted Account</string>
     <string name="SelectChat">Select Chat</string>
     <string name="ForwardTo">Forward to...</string>
