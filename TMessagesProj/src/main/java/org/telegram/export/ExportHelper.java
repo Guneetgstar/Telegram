@@ -3,9 +3,9 @@ package org.telegram.export;
 import android.content.Context;
 import android.os.Environment;
 
-import androidx.annotation.NonNull;
-
 import com.google.android.exoplayer2.util.Log;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.telegram.messenger.FileLoadOperation;
 import org.telegram.messenger.FileLoader;
@@ -18,6 +18,7 @@ import org.telegram.tgnet.TLRPC;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -25,26 +26,23 @@ import static org.telegram.export.Database.getDatabase;
 
 public class ExportHelper {
     public static void getCompleteChat(int userId, Context context, MessagesController controller){
-        int pageSize=50;
+        int pageSize=100;
         getDatabase(context).getMessageDao()
                 .deleteAll();
 //        getAppUserDir(context, ((long) userId)).delete();
         getAppCacheDir(context).delete();
-        new Thread(()-> {
-            TLRPC.TL_messages_getHistory req = new TLRPC.TL_messages_getHistory();
-            req.peer = controller.getInputPeer(userId);
-            req.limit = pageSize;
-            req.offset_id = 0;
-            req.offset_date = 0;
-            getPageChat(context, controller.getConnectionsManager(), req);
-        }).start();
+        TLRPC.TL_messages_getHistory req = new TLRPC.TL_messages_getHistory();
+        req.peer = controller.getInputPeer(userId);
+        req.limit = pageSize;
+        req.offset_id = 0;
+        req.offset_date = 0;
+        getPageChat(context, userId,controller.getConnectionsManager(), req);
     }
 
-    public static void getPageChat(Context context, ConnectionsManager connectionsManager, TLRPC.TL_messages_getHistory history) {
+    public static void getPageChat(Context context,int userId, ConnectionsManager connectionsManager, TLRPC.TL_messages_getHistory history) {
         connectionsManager.sendRequest(history, (response, error) -> {
             if (response != null) {
                 final TLRPC.messages_Messages res = (TLRPC.messages_Messages) response;
-                Log.i(ExportHelper.class.getName(), res.toString());
                 if(res.messages.size()<=history.limit){
                     history.offset_id=res.messages.get(res.messages.size()-1).id;
                     for (TLRPC.Message message: res.messages) {
@@ -52,14 +50,16 @@ public class ExportHelper {
                         String actionName=null;
                         if(message.media!=null){
                             File localFile=null;
+                            File finalDir=new File(getAppDir(context),String.valueOf(userId));
+                            finalDir.mkdir();
                             if(message.media.audio_unused !=null){
                                 MessageObject object=new MessageObject(UserConfig.selectedAccount, message, false);
                                 FileLoadOperation operation = new FileLoadOperation(object.getDocument(),object);
-                                localFile=new File(getAppDir(context).getPath()+"/"+ asyncDownloadFile(operation,message.id,getAppDir(context),getAppCacheDir(context)));
+                                localFile=new File(getAppDir(context),userId+"/"+ asyncDownloadFile(operation,message.id,finalDir,getAppCacheDir(context)));
                             }if(message.media.video_unused!=null){
                                 MessageObject object=new MessageObject(UserConfig.selectedAccount, message, false);
                                 FileLoadOperation operation = new FileLoadOperation(object.getDocument(),object);
-                                localFile=new File(getAppDir(context).getPath()+"/"+ asyncDownloadFile(operation,message.id,getAppDir(context),getAppCacheDir(context)));
+                                localFile=new File(getAppDir(context),userId+"/"+ asyncDownloadFile(operation,message.id,finalDir,getAppCacheDir(context)));
                             }if(message.media.photo!=null){
                                 TLRPC.PhotoSize size=null;
                                 for (TLRPC.PhotoSize tempSize:message.media.photo.sizes){
@@ -71,7 +71,7 @@ public class ExportHelper {
                                 ImageLocation location = ImageLocation.getForPhoto(size, message.media.photo);
                                 if (location != null) {
                                     FileLoadOperation operation = new FileLoadOperation(location, new MessageObject(UserConfig.selectedAccount, message, false),null,location.getSize());
-                                    localFile=new File(getAppDir(context).getPath()+"/"+ asyncDownloadFile(operation,message.id,getAppDir(context),getAppCacheDir(context)));
+                                    localFile=new File(getAppDir(context),userId+"/"+ asyncDownloadFile(operation,message.id,finalDir,getAppCacheDir(context)));
                                 }
                             }if(message.media.document!=null){
                                 TLRPC.TL_documentAttributeSticker attributeSticker=null;
@@ -85,12 +85,10 @@ public class ExportHelper {
                                     //Retain the name of the document and save the file
                                     message.message += FileLoader.getDocumentFileName(message.media.document);
                                     FileLoadOperation operation = new FileLoadOperation(message.media.document, new MessageObject(UserConfig.selectedAccount, message, false));
-                                    localFile=new File(getAppDir(context).getPath()+"/"+ asyncDownloadFile(operation,message.id,getAppDir(context),getAppCacheDir(context)));
+                                    localFile=new File(getAppDir(context),userId+"/"+ asyncDownloadFile(operation,message.id,finalDir,getAppCacheDir(context)));
                                 }
                             }if(message.media instanceof TLRPC.TL_messageMediaContact){
-                                localFile=getAppFile(context,
-                                        String.valueOf(message.id),
-                                        "vcard");
+                                localFile=new File(getAppDir(context), userId+"/"+(message.id)+ ".vcard");
                                 try(FileWriter fileWriter=new FileWriter(localFile)){
                                     fileWriter.append(message.media.vcard);
                                 }catch (Exception e){
@@ -101,15 +99,15 @@ public class ExportHelper {
                                 message.message+="lat/long "+(message.media.geo.lat)+"/"+(message.media.geo._long);
                             }
                             if(localFile==null && (message.message==null||message.message.isEmpty())){
-                                localFile=getAppFile(context,String.valueOf(message.id),"err");
+                                localFile=new File(getAppDir(context), userId+"/"+(message.id)+".err");
                                 try (FileWriter fileWriter=new FileWriter(localFile)){
-                                    fileWriter.append("Cant read msg id "+message.id+" media_type "+message.media.getClass());
+                                    fileWriter.append("Cant read msg id ").append(String.valueOf(message.id)).append(" media_type ").append(String.valueOf(message.media.getClass()));
                                 } catch (Exception e) {
                                     e.printStackTrace();
                                 }
                             }
                             if (localFile != null)
-                                filePath = localFile.getPath();
+                                filePath = localFile.getPath().substring(localFile.getPath().lastIndexOf("/"));
                         }
                         if(message.action!=null){
                             actionName=message.action.getClass().getSimpleName();
@@ -128,7 +126,19 @@ public class ExportHelper {
                                         ));
                     }
                 }if(res.messages.size()==history.limit){
-                    getPageChat(context,connectionsManager,history);
+                    getPageChat(context,userId,connectionsManager,history);
+                }else{
+                    List<Message> messages=getDatabase(context).getMessageDao()
+                            .getAll();
+                    Gson gson=new GsonBuilder().setPrettyPrinting().serializeNulls().create();
+                    File userDir=new File(getAppDir(context),String.valueOf(userId));
+                    userDir.mkdirs();
+                    File jsonChat=new File(userDir,userId+".json");
+                    try(FileWriter writer=new FileWriter(jsonChat)){
+                        writer.append(gson.toJson(messages));
+                    }catch (IOException e){
+                        e.printStackTrace();
+                    }
                 }
             } else {
                 Log.e(ExportHelper.class.getName(), "response is null");
@@ -152,8 +162,8 @@ public class ExportHelper {
         }
         return null;
     }
-    public static String asyncDownloadFile(FileLoadOperation operation,int localId,File finalDir,File tempDir){
-        String fileName=localId+operation.getFileName().substring(operation.getFileName().lastIndexOf("."));
+    public static String asyncDownloadFile(FileLoadOperation operation,int msgId,File finalDir,File tempDir){
+        String fileName=msgId+operation.getFileName().substring(operation.getFileName().lastIndexOf("."));
         operation.setPaths(UserConfig.selectedAccount, finalDir, tempDir);
         operation.setDelegate(new FileLoadOperation.FileLoadOperationDelegate() {
             @Override
@@ -180,10 +190,6 @@ public class ExportHelper {
         return fileName;
     }
 
-    public static File getAppPrivateDir(@NonNull Context context) {
-        return context.getFilesDir();
-    }
-
     public static File getAppDir(Context application) {
         String state = Environment.getExternalStorageState();
         File file;
@@ -203,15 +209,5 @@ public class ExportHelper {
         return file;
     }
 
-    public static File getAppFile(Context context, String fileName, String extension) {
-        return new File(getAppDir(context), fileName + "." + extension);
-    }
-
-    private static File[] getAppDirs(Context application) {
-        File[] files = new File[2];
-        files[0] = new File(Environment.getExternalStorageDirectory() + "/Telegram Exports");
-        files[1] = new File(application.getFilesDir() + "/Telegram Exports");
-        return files;
-    }
 
 }

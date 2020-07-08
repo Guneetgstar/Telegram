@@ -17,4 +17,7 @@ public interface MessageDao {
 
     @Query("delete from user_messages")
     public void deleteAll();
+
+    @Query("select * from user_messages")
+    public List<Message> getAll();
 }

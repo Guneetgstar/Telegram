@@ -1857,10 +1857,10 @@ public class ChatActivity extends BaseFragment implements NotificationCenter.Not
                     headerItem.addSubItem(delete_chat, R.drawable.msg_leave, LocaleController.getString("DeleteAndExit", R.string.DeleteAndExit));
                 } else {
                     headerItem.addSubItem(delete_chat, R.drawable.msg_delete, LocaleController.getString("DeleteChatUser", R.string.DeleteChatUser));
-                    if(!(currentUser.self|| ChatObject.isMegagroup(currentChat))){
-                        headerItem.addSubItem(export_chat, 0, LocaleController.getString("ExportChatUser", R.string.ExportChatUser));
-                    }
                 }
+            }
+            if(ContactsController.getInstance(currentAccount).isContact(((int) dialog_id))){
+                headerItem.addSubItem(export_chat, 0, LocaleController.getString("ExportChatUser", R.string.ExportChatUser));
             }
             if (currentUser != null && currentUser.self) {
                 headerItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString("AddShortcut", R.string.AddShortcut));
